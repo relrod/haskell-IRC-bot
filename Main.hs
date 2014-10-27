@@ -11,7 +11,9 @@ type Message = String
 
 data Event = Ping    Message -- code
            | Privmsg Message User Channel
-           | Join
+           | Join    User Channel
+           | Part    User Channel
+           | Invite  User Channel
            | Unknown
 
 data IRCConfig = IRCConfig {
@@ -74,11 +76,15 @@ readCommand :: String -> Event
 readCommand s
     | ("PING :"  `isPrefixOf` s)   = Ping $ drop 6 s
     | ("PRIVMSG" `isInfixOf`  s)   = Privmsg (getMessage s) (getUser s) (getMessageReiceiver s)
+    | ("JOIN"    `isInfixOf`  s)   = Join (getUser s) (getMessage s)
+    | ("PART"    `isInfixOf`  s)   = Part (getUser s) (getPartedUser s)
+    | ("INVITE"  `isInfixOf`  s)   = Invite (getUser s) (getMessage s)
     | otherwise                    = Unknown
   where
     getUser = decodeUser . drop 1 . takeWhile (' ' /=)
     getMessage = drop 1 . dropWhile (':' /=) . drop 1
     getMessageReiceiver = takeWhile (' ' /=) . drop 9 . dropWhile (' ' /=)
+    getPartedUser = drop 6 . takeWhile (' ' /=)
 
 onEvent :: Handle -> Event -> IO ()
 onEvent h (Ping code) = do
@@ -86,5 +92,8 @@ onEvent h (Ping code) = do
   return ()
 onEvent h (Privmsg msg user to) = do
   printf "%s\n" $ "Received message \""++msg++"\" by "++(nick user)++" to "++to
+  return ()
+onEvent h (Invite user channel) = do
+  write h $ "JOIN " ++ channel
   return ()
 onEvent _ _           = return ()
