@@ -6,8 +6,8 @@ import Data.List.Split
 import Data.ConfigFile
 import Data.Either.Utils
 
-data Event = Ping    String        -- code
-           | Privmsg String User   -- msg, User
+data Event = Ping    String              -- code
+           | Privmsg String User String  -- msg, User, Channel
            | Join
            | Unknown
 
@@ -56,7 +56,7 @@ loadConfig path = do
     }
 
 write :: Handle -> String -> IO ()
-write h s = hPrintf h "%s\r\n" s
+write h = hPrintf h "%s\r\n"
 
 listen :: Handle -> IO ()
 listen h = forever $ do
@@ -70,17 +70,18 @@ listen h = forever $ do
 readCommand :: String -> Event
 readCommand s
     | ("PING :"  `isPrefixOf` s)   = Ping $ drop 6 s
-    | ("PRIVMSG" `isInfixOf`  s)   = Privmsg (getMessage s) $ getUser s
+    | ("PRIVMSG" `isInfixOf`  s)   = Privmsg (getMessage s) (getUser s) (getMessageReiceiver s)
     | otherwise                    = Unknown
   where
-    getUser s = decodeUser $ drop 1 $ takeWhile (/=' ') s
-    getMessage s = drop 1 $ dropWhile (/=':') $ drop 1 s
+    getUser = decodeUser . drop 1 . takeWhile (' ' /=)
+    getMessage = drop 1 . dropWhile (':' /=) . drop 1
+    getMessageReiceiver = takeWhile (' ' /=) . drop 9 . dropWhile (' ' /=)
 
 onEvent :: Handle -> Event -> IO ()
 onEvent h (Ping code) = do
   write h $ "PONG :" ++ code
   return ()
-onEvent h (Privmsg msg user) = do
-  printf "%s\n" $ "Received message \""++msg++"\" by "++(nick user)
+onEvent h (Privmsg msg user to) = do
+  printf "%s\n" $ "Received message \""++msg++"\" by "++(nick user)++" to "++to
   return ()
 onEvent _ _           = return ()
