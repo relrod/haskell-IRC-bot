@@ -6,15 +6,18 @@ import Data.List.Split
 import Data.ConfigFile
 import Data.Either.Utils
 
-data Event = Ping    String              -- code
-           | Privmsg String User String  -- msg, User, Channel
+type Channel = String
+type Message = String
+
+data Event = Ping    Message -- code
+           | Privmsg Message User Channel
            | Join
            | Unknown
 
 data IRCConfig = IRCConfig {
   server    :: String,
   port      :: Int,
-  chans     :: [String],
+  chans     :: [Channel],
   username  :: String,
   realname  :: String
 }
