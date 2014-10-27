@@ -6,8 +6,8 @@ import Data.List.Split
 import Data.ConfigFile
 import Data.Either.Utils
 
-data Event = Ping    String   -- code
-           | Privmsg String   -- msg
+data Event = Ping    String        -- code
+           | Privmsg String User   -- msg, User
            | Join
            | Unknown
 
@@ -18,6 +18,21 @@ data IRCConfig = IRCConfig {
   username  :: String,
   realname  :: String
 }
+
+data User = User {
+  nick :: String,
+  name :: String,
+  host :: String,
+  raw  :: String
+}
+
+decodeUser :: String -> User
+decodeUser s = User {
+    nick = takeWhile (/= '!') s,
+    name = takeWhile (/= '@') $ dropWhile (/= '!') s,
+    host = dropWhile (/= '@') s,
+    raw  = s
+  }
 
 main = do
   conf <- loadConfig "./settings.cfg"
@@ -55,13 +70,17 @@ listen h = forever $ do
 readCommand :: String -> Event
 readCommand s
     | ("PING :"  `isPrefixOf` s)   = Ping $ drop 6 s
-    | ("PRIVMSG" `isInfixOf`  s)   = Privmsg $ getMessage s
+    | ("PRIVMSG" `isInfixOf`  s)   = Privmsg (getMessage s) $ getUser s
     | otherwise                    = Unknown
   where
-    getMessage s = drop 1 $ dropWhile (/=':') s
+    getUser s = decodeUser $ drop 1 $ takeWhile (/=' ') s
+    getMessage s = drop 1 $ dropWhile (/=':') $ drop 1 s
 
 onEvent :: Handle -> Event -> IO ()
 onEvent h (Ping code) = do
   write h $ "PONG :" ++ code
+  return ()
+onEvent h (Privmsg msg user) = do
+  printf "%s\n" $ "Received message \""++msg++"\" by "++(nick user)
   return ()
 onEvent _ _           = return ()
