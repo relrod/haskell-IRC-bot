@@ -5,6 +5,7 @@ import Data.List
 import Data.List.Split
 import Data.ConfigFile
 import Data.Either.Utils
+import Control.Monad
 
 type Channel = String
 type Message = String
@@ -43,9 +44,9 @@ main = do
   conf <- loadConfig "./settings.cfg"
   h <- connectTo (server conf) (PortNumber (fromIntegral (port conf)))
   hSetBuffering h NoBuffering
-  write h $ "NICK " ++ (username conf)
-  write h $ "USER " ++ (username conf) ++ " 0 * :" ++ (realname conf)
-  write h $ "JOIN " ++ (head $ chans conf)
+  write h $ "NICK " ++ username conf
+  write h $ "USER " ++ username conf ++ " 0 * :" ++ realname conf
+  write h $ "JOIN " ++ head (chans conf)
   listen h
 
 loadConfig :: String -> IO IRCConfig
@@ -69,17 +70,15 @@ listen h = forever $ do
     let s = init t
     onEvent h $ readCommand s
     putStrLn s
-  where
-    forever a = a >> forever a
 
 readCommand :: String -> Event
 readCommand s
-    | ("PING :"  `isPrefixOf` s)   = Ping $ drop 6 s
-    | ("PRIVMSG" `isInfixOf`  s)   = Privmsg (getMessage s) (getUser s) (getMessageReiceiver s)
-    | ("JOIN"    `isInfixOf`  s)   = Join (getUser s) (getMessage s)
-    | ("PART"    `isInfixOf`  s)   = Part (getUser s) (getPartedUser s)
-    | ("INVITE"  `isInfixOf`  s)   = Invite (getUser s) (getMessage s)
-    | otherwise                    = Unknown
+    | "PING :"  `isPrefixOf` s   = Ping $ drop 6 s
+    | "PRIVMSG" `isInfixOf`  s   = Privmsg (getMessage s) (getUser s) (getMessageReiceiver s)
+    | "JOIN"    `isInfixOf`  s   = Join (getUser s) (getMessage s)
+    | "PART"    `isInfixOf`  s   = Part (getUser s) (getPartedUser s)
+    | "INVITE"  `isInfixOf`  s   = Invite (getUser s) (getMessage s)
+    | otherwise                   = Unknown
   where
     getUser = decodeUser . drop 1 . takeWhile (' ' /=)
     getMessage = drop 1 . dropWhile (':' /=) . drop 1
@@ -91,7 +90,7 @@ onEvent h (Ping code) = do
   write h $ "PONG :" ++ code
   return ()
 onEvent h (Privmsg msg user to) = do
-  printf "%s\n" $ "Received message \""++msg++"\" by "++(nick user)++" to "++to
+  printf "%s\n" $ "Received message \""++msg++"\" by "++ nick user ++" to "++to
   return ()
 onEvent h (Invite user channel) = do
   write h $ "JOIN " ++ channel
