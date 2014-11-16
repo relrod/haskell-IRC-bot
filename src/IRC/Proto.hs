@@ -4,7 +4,7 @@ module IRC.Proto (
 ) where
 
 import Text.Printf (hPrintf)
-import Control.Monad (forever, foldM_)
+import Control.Monad (forever)
 import Control.Applicative ((<*>), (<$>))
 import Network (connectTo, PortID(..))
 import System.IO (hSetBuffering, BufferMode(NoBuffering), Handle, hGetLine)
@@ -42,7 +42,7 @@ listen h eventListeners = forever $ do
     let s = init t
     let event = readCommand s
     let actions = eventListeners <*> [event]
-    foldM_ performAction h actions
+    mapM_ (performAction h) actions
     putStrLn s
 
 connect :: IRCConfig -> [Event -> Action] -> IO ()
@@ -54,14 +54,11 @@ connect conf eventListeners = do
   write h $ "JOIN " ++ head (chans conf)
   listen h eventListeners
 
-performAction :: Handle -> Action -> IO Handle
-performAction h (Pong code) = do
+performAction :: Handle -> Action -> IO ()
+performAction h (Pong code) =
   write h $ "PONG :" ++ code
-  return h
-performAction h (Privmsg message channel) = do
+performAction h (Privmsg message channel) =
   write h $ "PRIVMSG " ++ channel ++ " :" ++ message
-  return h
-performAction h (Join channel) = do
+performAction h (Join channel) =
   write h $ "JOIN " ++ channel
-  return h
-performAction h _ = return h
+performAction h _ = return ()
