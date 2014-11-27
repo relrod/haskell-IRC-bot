@@ -20,7 +20,7 @@ data Event = OnPing    Message -- code
            | OnInvite  User Channel
            | OnConnect
            | Unknown
-           
+
 data Action = Pong      Message -- code
             | Privmsg   Message Channel
             | Join      Channel
