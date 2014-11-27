@@ -2,7 +2,8 @@ module IRC (
   loadConfig,
   defaultEventListener,
   parseCommand,
-  reply
+  reply,
+  replyIO
 ) where
 
 import Data.List (isPrefixOf)
@@ -39,6 +40,14 @@ parseCommand msg =
   then return $ (splitOn " " . drop 1) msg
   else return []
 
-reply :: Message -> IRCConfig -> User -> Channel -> IO Action
-reply msg conf user channel | channel == username conf = return $ Privmsg msg (nick user)
-                            | otherwise = return $ Privmsg msg channel
+reply :: Message -> IRCConfig -> User -> Channel -> Action
+reply msg conf user channel | channel == username conf = Privmsg msg (nick user)
+                            | otherwise = Privmsg msg channel
+
+replyIO :: IO Message -> IRCConfig -> User -> Channel -> IO Action
+replyIO mmsg conf user channel  | channel == username conf = do
+                                  msg <- mmsg
+                                  return $ Privmsg msg (nick user)
+                                | otherwise = do
+                                  msg <- mmsg
+                                  return $ Privmsg msg channel

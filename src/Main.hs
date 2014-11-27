@@ -5,16 +5,16 @@ import IRC.Data
 main :: IO ()
 main = do
   conf <- loadConfig "./settings.cfg"
-  connect conf [\c e -> return $ defaultEventListener c e, onEvent]
+  connect conf onEvent
 
 onEvent :: IRCConfig -> Event -> IO Action
 onEvent conf (OnPrivmsg msg user to) = executeCommand (parseCommand msg) conf user to
-onEvent _ _ = return Idle
+onEvent conf event = return $ defaultEventListener conf event
 
 executeCommand :: Args -> IRCConfig -> User -> Channel -> IO Action
 executeCommand margs conf user chan = do
   args <- margs
-  case args of
+  return $ case args of
     ("hi":_)    -> reply ("Hi, " ++ nick user) conf user chan
     ("penis":_) -> reply "8=====D" conf user chan
-    _           -> return Idle
+    _           -> Idle

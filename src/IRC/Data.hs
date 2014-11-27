@@ -5,7 +5,8 @@ module IRC.Data (
   Event(..),
   Action(..),
   IRCConfig(..),
-  User(..)
+  User(..),
+  Command(..)
 ) where
 
 type Channel = String
