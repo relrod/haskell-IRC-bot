@@ -17,4 +17,4 @@ executeCommand margs conf user chan = do
   case args of
     ("hi":_)    -> reply ("Hi, " ++ nick user) conf user chan
     ("penis":_) -> reply "8=====D" conf user chan
-    _ -> return Idle
+    _           -> return Idle
