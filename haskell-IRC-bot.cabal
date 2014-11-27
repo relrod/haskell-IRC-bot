@@ -17,7 +17,6 @@ executable haskell-IRC-bot
                        split >=0.2 && <0.3,
                        network >=2.6 && <2.7,
                        ConfigFile >= 1 && < 1.2,
-                       MissingH >= 1.1 && < 1.4,
                        random >= 1.0 && < 1.2
   hs-source-dirs:      src
   default-language:    Haskell2010

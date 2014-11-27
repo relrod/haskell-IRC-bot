@@ -8,9 +8,12 @@ module IRC (
 import Data.List (isPrefixOf)
 import Data.List.Split (splitOn)
 import Data.ConfigFile
-import Data.Either.Utils (forceEither)
 import Control.Applicative ((<$>))
 import IRC.Data
+
+forceEither :: Show a => Either a b -> b
+forceEither (Left a) = error . show $ a
+forceEither (Right b) = b
 
 loadConfig :: String -> IO IRCConfig
 loadConfig path = do
