@@ -1,6 +1,7 @@
 module IRC.Data (
   Channel,
   Message,
+  Args,
   Event(..),
   Action(..),
   IRCConfig(..),
@@ -9,12 +10,15 @@ module IRC.Data (
 
 type Channel = String
 type Message = String
+type Args    = IO [String]
 
 data Event = OnPing    Message -- code
+           | OnCommand Command
            | OnPrivmsg Message User Channel
            | OnJoin    User Channel
            | OnPart    User Channel
            | OnInvite  User Channel
+           | OnConnect
            | Unknown
            
 data Action = Pong      Message -- code
@@ -22,6 +26,7 @@ data Action = Pong      Message -- code
             | Join      Channel
       --      | Part      Channel
       --      | Invite    User Channel
+            | All [Action]
             | Idle
 
 data IRCConfig = IRCConfig {
@@ -37,4 +42,10 @@ data User = User {
   name :: String,
   host :: String,
   raw  :: String
+}
+
+data Command = Command {
+  args    :: Args,
+  user    :: User,
+  channel :: Channel
 }

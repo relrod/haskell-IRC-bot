@@ -1,15 +1,21 @@
 import IRC
 import System.IO (Handle)
-import Data.List (isInfixOf, isPrefixOf)
 import IRC.Proto
 import IRC.Data
 
 main :: IO ()
 main = do
   conf <- loadConfig "./settings.cfg"
-  connect conf [defaultEventListener, onEvent]
+  connect conf $ (\c e -> return $ defaultEventListener c e) : onEvent : []
 
-onEvent :: Event -> Action
-onEvent (OnPrivmsg msg user to) | "!hi" `isPrefixOf` msg = Privmsg ("Hi, " ++ (nick user)) to
-                                | otherwise = Idle
-onEvent _ = Idle
+onEvent :: IRCConfig -> Event -> IO Action
+onEvent conf (OnPrivmsg msg user to) = executeCommand (parseCommand msg) conf user to
+onEvent _ _ = return Idle
+
+executeCommand :: Args -> IRCConfig -> User -> Channel -> IO Action
+executeCommand margs conf user chan = do
+  args <- margs
+  case args of
+    ("hi":xs) -> reply ("Hi, " ++ (nick user)) conf user chan
+    ("penis":xs) -> reply "8=====D" conf user chan
+    _ -> return Idle

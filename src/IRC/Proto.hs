@@ -5,7 +5,7 @@ module IRC.Proto (
 
 import Text.Printf (hPrintf)
 import Control.Monad (forever)
-import Control.Applicative ((<*>), (<$>))
+import Control.Applicative ((<*>))
 import Network (connectTo, PortID(..))
 import System.IO (hSetBuffering, BufferMode(NoBuffering), Handle, hGetLine)
 import Data.List (isInfixOf, isPrefixOf)
@@ -26,6 +26,7 @@ readCommand s
     | "JOIN"    `isInfixOf`  s   = OnJoin (getUser s) (getMessage s)
     | "PART"    `isInfixOf`  s   = OnPart (getUser s) (getPartedUser s)
     | "INVITE"  `isInfixOf`  s   = OnInvite (getUser s) (getMessage s)
+    | " 001 "   `isInfixOf`  s   = OnConnect
     | otherwise                  = Unknown
   where
     getUser = decodeUser . drop 1 . takeWhile (' ' /=)
@@ -36,23 +37,21 @@ readCommand s
 write :: Handle -> String -> IO ()
 write h = hPrintf h "%s\r\n"
 
-listen :: Handle -> [Event -> Action] -> IO ()
-listen h eventListeners = forever $ do
-    t <- hGetLine h
-    let s = init t
-    let event = readCommand s
-    let actions = eventListeners <*> [event]
-    mapM_ (performAction h) actions
+listen :: Handle -> IRCConfig -> [IRCConfig -> Event -> IO Action] -> IO ()
+listen h conf eventListeners = forever $ do
+    s <- hGetLine h
+    let event = readCommand (init s)
+    let actions = eventListeners <*> [conf] <*> [event]
+    mapM_ (>>= performAction h) actions
     putStrLn s
 
-connect :: IRCConfig -> [Event -> Action] -> IO ()
+connect :: IRCConfig -> [IRCConfig -> Event -> IO Action] -> IO ()
 connect conf eventListeners = do
   h <- connectTo (server conf) (PortNumber (fromIntegral (port conf)))
   hSetBuffering h NoBuffering
   write h $ "NICK " ++ username conf
   write h $ "USER " ++ username conf ++ " 0 * :" ++ realname conf
-  write h $ "JOIN " ++ head (chans conf)
-  listen h eventListeners
+  listen h conf eventListeners
 
 performAction :: Handle -> Action -> IO ()
 performAction h (Pong code) =
@@ -61,4 +60,6 @@ performAction h (Privmsg message channel) =
   write h $ "PRIVMSG " ++ channel ++ " :" ++ message
 performAction h (Join channel) =
   write h $ "JOIN " ++ channel
+performAction h (All actions) =
+  mapM_ (performAction h) actions
 performAction h _ = return ()
