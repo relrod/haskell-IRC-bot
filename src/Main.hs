@@ -6,7 +6,7 @@ import IRC.Data
 main :: IO ()
 main = do
   conf <- loadConfig "./settings.cfg"
-  connect conf $ onEvent : []
+  connect conf onEvent
 
 onEvent :: IRCConfig -> Event -> IO Action
 onEvent conf (OnPrivmsg msg user to) = executeCommand (parseCommand msg) conf user to

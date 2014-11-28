@@ -37,21 +37,21 @@ readCommand s
 write :: Handle -> String -> IO ()
 write h = hPrintf h "%s\r\n"
 
-listen :: Handle -> IRCConfig -> [IRCConfig -> Event -> IO Action] -> IO ()
-listen h conf eventListeners = forever $ do
+listen :: Handle -> IRCConfig -> (IRCConfig -> Event -> IO Action) -> IO ()
+listen h conf eventListener = forever $ do
     s <- hGetLine h
     let event = readCommand (init s)
-    let actions = eventListeners <*> [conf] <*> [event]
-    mapM_ (>>= performAction h) actions
+    action <- eventListener conf event
+    performAction h action
     putStrLn s
 
-connect :: IRCConfig -> [IRCConfig -> Event -> IO Action] -> IO ()
-connect conf eventListeners = do
+connect :: IRCConfig -> (IRCConfig -> Event -> IO Action) -> IO ()
+connect conf eventListener = do
   h <- connectTo (server conf) (PortNumber (fromIntegral (port conf)))
   hSetBuffering h NoBuffering
   write h $ "NICK " ++ username conf
   write h $ "USER " ++ username conf ++ " 0 * :" ++ realname conf
-  listen h conf eventListeners
+  listen h conf eventListener
 
 performAction :: Handle -> Action -> IO ()
 performAction h (Pong code) =
